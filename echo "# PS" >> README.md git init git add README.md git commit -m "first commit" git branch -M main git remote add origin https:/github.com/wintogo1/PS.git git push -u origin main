@@ -1,1 +1,39 @@
+#Inhalt von Gruppen zählen
 (Get-ADGroupMember -Identity “GroupName”).count> D:\Monitoring\GroupCount\count.txt
+#######################################################################################################
+# Acl von Ordnern auslesen
+Get-Acl -path "D:\Ordner" | select Path, Owner, AccessToString | Export-Csv -Path "D:\Monitoring\ACL\$((Get-Date).ToString('MM-dd-yyyy')).csv" -NoClobber -NoTypeInformation
+######################################################################################################
+# Security Log exportieren
+# Config
+$logFileName = "Security" # Add Name of the Logfile (System, Application, etc)
+$path = "D:\Monitoring\Seclog\" # Add Path, needs to end with a backsplash
+
+# do not edit
+$exportFileName = $logFileName + (get-date -f yyyyMMdd) + ".evt"
+$logFile = Get-WmiObject Win32_NTEventlogFile | Where-Object {$_.logfilename -eq $logFileName}
+$logFile.backupeventlog($path + $exportFileName)
+
+# Deletes all .evt logfiles in $path
+# Be careful, this script removes all files with the extension .evt not just the selfcreated logfiles
+$Daysback = "-7"
+
+$CurrentDate = Get-Date
+$DatetoDelete = $CurrentDate.AddDays($Daysback)
+Get-ChildItem $Path | Where-Object { ($_.LastWriteTime -lt $DatetoDelete) -and ($_.Extension -eq ".evt") } | Remove-Item
+Clear-Eventlog -LogName $logFileName
+###########################################################################################################################################
+# User Gruppen kopieren
+Import-Module ActiveDirectory
+# Referenz-Benutzer 1
+$user_1 = 'user1'
+# Benutzer 2 wird angepasst
+$user_2 = 'user2'
+# Gruppenzugehoerigkeit vergleichen
+$result = compare (Get-ADPrincipalGroupMembership $user_1) (Get-ADPrincipalGroupMembership $user_2) -Property Name -PassThru | ?{$_.Name -like '*'}
+# Remove user_2 from groups where user_1 is no member
+$result | ?{$_.SideIndicator -eq '=>'} | %{write-host "Benutzer $user_2 aus Gruppe entfernen '$($_.Name)'." -F Green ; Remove-ADGroupMember $_.Name -Members $user_2 -Confirm:$false}
+# Add user_2 to groups which user_1 is member
+$result | ?{$_.SideIndicator -eq '<='} | %{write-host "Benutzer $user_2 zu Gruppe hinzufügen '$($_.Name)'." -F Green; Add-ADGroupMember $_.Name -Members $user_2 -Confirm:$false}
+
+
