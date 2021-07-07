@@ -36,4 +36,4 @@ $result | ?{$_.SideIndicator -eq '=>'} | %{write-host "Benutzer $user_2 aus Grup
 # Add user_2 to groups which user_1 is member
 $result | ?{$_.SideIndicator -eq '<='} | %{write-host "Benutzer $user_2 zu Gruppe hinzufügen '$($_.Name)'." -F Green; Add-ADGroupMember $_.Name -Members $user_2 -Confirm:$false}
 
-
+https://4bes.nl/2019/06/02/step-by-step-start-using-git-for-powershell/
